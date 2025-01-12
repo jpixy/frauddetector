@@ -1,0 +1,38 @@
+package com.johnnydemo.frauddetector.rules;
+
+import com.johnnydemo.frauddetector.entity.Transaction;
+import java.math.BigDecimal;
+import org.slf4j.Logger;
+import java.util.Date;
+import java.util.List;
+
+global Logger logger
+
+// 异常交易地点：交易地点与账户注册地点不一致。
+rule "Suspicious Transaction Location"
+    when
+        $t: Transaction(accountLocation != null, transactionLocation != null,
+                         transactionLocation != accountLocation)
+    then
+        $t.setFraud(true);
+        logger.info("[FRAUD DETECTED] Suspicious transaction location detected for account: " + $t.getAccountNumberFrom());
+end
+
+// 夜间交易：交易发生在夜间（例如，22:00 至 06:00）。
+rule "Nighttime Transaction"
+    when
+        $t: Transaction(createdAt != null)
+        eval($t.getCreatedAt().getHours() >= 22 || $t.getCreatedAt().getHours() < 6)
+    then
+        $t.setFraud(true);
+        logger.info("[FRAUD DETECTED] Nighttime transaction detected for account: " + $t.getAccountNumberFrom());
+end
+
+// 大额交易：交易金额超过一定阈值（例如，10000 元）。
+rule "High Amount Transaction"
+    when
+        $t: Transaction(amount != null, amount.compareTo(new BigDecimal("10000")) > 0)
+    then
+        $t.setFraud(true);
+        logger.info("[FRAUD DETECTED] High amount transaction detected for account: " + $t.getAccountNumberFrom());
+end

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.johnnydemo.frauddetector.mapper.TransactionMapper">
+
+    <!-- 插入交易记录 -->
+    <insert id="insert" parameterType="com.johnnydemo.frauddetector.entity.Transaction">
+        INSERT INTO transactions (
+        account_number_from, account_number_to, account_location, transaction_location, amount, transaction_type, is_fraud, status, created_at, updated_at
+        ) VALUES (
+        #{accountNumberFrom}, #{accountNumberTo}, #{accountLocation}, #{transactionLocation}, #{amount}, #{transactionType}, #{isFraud}, #{status}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <!-- 根据 ID 查询交易记录 -->
+    <select id="selectById" parameterType="long" resultType="com.johnnydemo.frauddetector.entity.Transaction">
+        SELECT * FROM transactions WHERE id = #{id}
+    </select>
+
+    <!-- 查询所有交易记录 -->
+    <select id="selectAll" resultType="com.johnnydemo.frauddetector.entity.Transaction">
+        SELECT * FROM transactions
+    </select>
+
+    <!-- 更新交易记录 -->
+    <update id="update" parameterType="com.johnnydemo.frauddetector.entity.Transaction">
+        UPDATE transactions
+        SET
+        account_number_from = #{accountNumberFrom},
+        account_number_to = #{accountNumberTo},
+        account_location = #{accountLocation},
+        transaction_location = #{transactionLocation},
+        amount = #{amount},
+        transaction_type = #{transactionType},
+        is_fraud = #{isFraud},
+        status = #{status},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据 ID 删除交易记录 -->
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM transactions WHERE id = #{id}
+    </delete>
+
+</mapper>
