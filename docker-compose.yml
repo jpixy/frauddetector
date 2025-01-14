@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    image: frauddetector:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://db:3306/demo_db?useSSL=false&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=remote_user
+      - SPRING_DATASOURCE_PASSWORD=123456
+    networks:
+      - app-network
+
+  db:
+    image: mariadb:latest
+    volumes:
+      - /opt/mariadb/data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      - MYSQL_ROOT_PASSWORD=123456
+      - MYSQL_DATABASE=demo_db
+      - MYSQL_USER=remote_user
+      - MYSQL_PASSWORD=123456
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
