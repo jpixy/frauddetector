@@ -1,0 +1,10 @@
+{{- if eq .Values.service.type "LoadBalancer" }}
+NOTES:
+To access your application, get the LoadBalancer IP by running:
+
+  {{- if .Values.service.loadBalancerIP }}
+  {{ .Values.service.loadBalancerIP }}
+  {{- else }}
+  kubectl get svc {{ .Release.Name }}-{{ .Chart.Name }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+  {{- end }}
+{{- end }}

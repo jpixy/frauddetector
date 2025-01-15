@@ -25,12 +25,12 @@ docker-build:
 # Run the Docker container
 docker-run: docker-build docker-db-run
 	docker run -d -p $(DOCKER_PORT):$(DOCKER_PORT) \
-	    --name $(DOCKER_CONTAINER_NAME) \
-	    --network $(DOCKER_NET_NAME) \
-	    -e SPRING_DATASOURCE_URL=jdbc:mariadb://$(DOCKER_DB_NAME):3306/demo_db?useSSL=false\&serverTimezone=UTC \
-	    -e SPRING_DATASOURCE_USERNAME=remote_user \
-	    -e SPRING_DATASOURCE_PASSWORD=123456 \
-	    $(DOCKER_IMAGE_NAME):latest
+		--name $(DOCKER_CONTAINER_NAME) \
+		--network $(DOCKER_NET_NAME) \
+		-e SPRING_DATASOURCE_URL=jdbc:mariadb://$(DOCKER_DB_NAME):3306/demo_db?useSSL=false\&serverTimezone=UTC \
+		-e SPRING_DATASOURCE_USERNAME=remote_user \
+		-e SPRING_DATASOURCE_PASSWORD=123456 \
+		$(DOCKER_IMAGE_NAME):latest
 
 # Stop and remove the Docker container
 docker-stop:
@@ -54,12 +54,12 @@ docker-db-run: create-network
 	sudo mkdir -p /opt/mariadb/data
 	sudo chmod 777 /opt/mariadb/data
 	docker run -d --name $(DOCKER_DB_NAME) \
-	  --network $(DOCKER_NET_NAME) \
-	  -p 3306:3306 \
-	  -e MYSQL_ROOT_PASSWORD=123456 \
-	  -v $(CURRENT_DIR)/init.sql:/docker-entrypoint-initdb.d/init.sql \
-	  -v /opt/mariadb/data:/var/lib/mysql \
-	  mariadb:latest
+		--network $(DOCKER_NET_NAME) \
+		-p 3306:3306 \
+		-e MYSQL_ROOT_PASSWORD=123456 \
+		-v $(CURRENT_DIR)/init.sql:/docker-entrypoint-initdb.d/init.sql \
+		-v /opt/mariadb/data:/var/lib/mysql \
+		mariadb:latest
 
 # Stop and remove the MariaDB container
 docker-db-stop:
@@ -83,6 +83,45 @@ run:
 stop:
 	docker-compose -f ./docker-compose.yml down
 
+# Kubernetes deployment
+k8s-prepare:
+	kubectl create namespace fraud-detector-ns
+	kubectl get namespaces
+
+k8s-deploy:
+	helm install my-fraud-detector helm/fraud-detector-chart/fraud-detector \
+		--namespace fraud-detector-ns \
+		--set app.image.repository=frauddetector \
+		--set app.image.tag=latest \
+		--set app.port=8080 \
+		--set app.name=fraud-detector \
+		--set db.image.repository=mariadb \
+		--set db.image.tag=latest \
+		--set db.rootPassword="123456" \
+		--set db.database="demo_db" \
+		--set db.username="remote_user" \
+		--set db.password="123456" \
+		--set db.name=fraud-detector-db \
+		--set service.port=8080 \
+		--set service.type=ClusterIP \
+		--set service.name=fraud-detector-service \
+		--set replicaCount=3 \
+		--set autoscaling.enabled=true \
+		--set autoscaling.minReplicas=3 \
+		--set autoscaling.maxReplicas=10 \
+		--set autoscaling.targetCPUUtilizationPercentage=80 \
+		--set serviceAccount.create=true \
+		--set serviceAccount.name=fraud-detector-sa \
+		--set ingress.enabled=false
+	kubectl port-forward svc/fraud-detector-service 8080:8080 -n fraud-detector-ns
+
+k8s-delete:
+	helm delete my-fraud-detector --namespace fraud-detector-ns
+
+k8s-list:
+	kubectl get pods -n fraud-detector-ns
+	kubectl get services -n fraud-detector-ns
+	kubectl get hpa -n fraud-detector-ns
 
 # Help message
 help:

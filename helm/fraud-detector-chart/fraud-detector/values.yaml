@@ -1,0 +1,53 @@
+# Default values for fraud-detector.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 3
+
+app:
+  name: fraud-detector
+  image:
+    repository: frauddetector
+    pullPolicy: IfNotPresent
+    tag: ""
+  port: 8080
+  env:
+    SPRING_DATASOURCE_URL: "jdbc:mariadb://db:3306/demo_db?useSSL=false&serverTimezone=UTC"
+    SPRING_DATASOURCE_USERNAME: "remote_user"
+    SPRING_DATASOURCE_PASSWORD: "123456"
+
+db:
+  name: fraud-detector-db
+  image:
+    repository: mariadb
+    tag: latest
+    pullPolicy: IfNotPresent
+  rootPassword: "123456"
+  database: "demo_db"
+  username: "remote_user"
+  password: "123456"
+
+service:
+  name: fraud-detector-service
+  type: ClusterIP
+  port: 8080
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+serviceAccount:
+  create: true
+  name: "fraud-detector-sa"
+
+ingress:
+  enabled: false
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

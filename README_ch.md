@@ -1,111 +1,107 @@
 # Readme
 
-[中文版](./README_ch.md)
+[English version](./README.md)
 
-## What is it ?
+## 这是什么？
 
-This is a bank fraud transaction detection system.
+这是一个银行欺诈交易检测系统。
 
-- High concurrency, high performance
-- Provides auto-scalability in a cloud environment, enhancing high availability
-- Performs fraud detection based on predefined rules
-  If you plan to use it in a production environment, it is advisable to refer to these [recommendations for production use](#Recommendations for production).
+- 高并发， 高性能
+- 在云环境中提供自动伸缩性， 提高高可用性
+- 根据预定义的规则进行欺诈检测
+  如果你想在生产环境中使用它， 那么你最好参考这些[生产环境中使用的建议](#如果在生产环境中使用需要注意什么)
 
+## 架构设计
 
-## Architecture design
+![架构图](doc/images/architecture_diagram.png "架构图")
 
-![Architecture](doc/images/architecture_diagram.png "Architecture")
+要点介绍
 
-Key Points
+- Message Queue， 可以采用Kafka， RocketMQ等常见消息队列，也可以使用云厂商提供的MQ产品，如AWS SQS
+- Data Streams Framework, 可以选型Flink
+- Drools 是进行预定义欺诈规则的组件，支持热部署，业务人员可以不懂技术代码，用独特的规则语言来建立欺诈规则
+- 生产环境中，会有生产者消费者的agent和MQ组成前置，最终Springboot + Mybatis的组合将数据持久化到DB中去。
 
-- **Message Queue**: Common message queues such as Kafka or RocketMQ can be used, or you can opt for cloud provider MQ products, like AWS SQS.
-- **Data Streams Framework**: Flink is a suitable choice.
-- **Drools**: This component is used for predefined fraud rules, supporting hot deployment. Business personnel can establish fraud rules using a unique rule language without needing to understand technical code.
-- **Production Environment**: In a production setting, there will be a frontend composed of producer-consumer agents and MQ. Ultimately, the combination of Springboot + Mybatis will persist data to the database.
+如果你想了解更多的调研阶段的故事，[请参阅这里](#调研阶段的故事)
 
-If you are interested in learning more about the stories from the research phase, [please refer to this section](#Research Stories).
+## 如何使用
 
-
-## How to use it
-
-### Preparation
+### 一些准备工作
 
 - JDK 17
-- Maven, better to setup mirrors
-- Docker + docker-compose， better to setup mirrors
+- Maven, 最好配置好国内仓库镜像
+- Docker + docker-compose， 同样最好配置好国内仓库镜像
 - K8S
 
-### Download source code
+### 下载源码到本地
 
 ```declarative
 git clone https://github.com/jpixy/frauddetector.git
 cd frauddetector/
 ```
 
-### Run Unit Tests
+### 尝试运行下单元测试
 
 ```declarative
 make test
 ```
 
-![Unit tests results](doc/images/make_test.png "UT")
+![单元测试结果](doc/images/make_test.png "UT")
 
-![UT in IDE](doc/images/ide_junit_test.png "UT")
+![在IDE中执行JUnit更加直观](doc/images/ide_junit_test.png "UT")
 
-#### Fraud Rules
+#### 欺诈规则
 
 ```declarative
 
-Abnormal Transaction Location:
-Check if the transaction location is inconsistent with the account registration location.
-If it is inconsistent, mark it as a fraudulent transaction and log it.
+异常交易地点：
+检查交易地点是否与账户注册地点不一致。
+如果不一致，则标记为欺诈交易，并记录日志。
 
-Nighttime Transactions:
-Check if the transaction time is during the night (22:00 to 06:00).
-If it is a nighttime transaction, mark it as a fraudulent transaction and log it.
+夜间交易：
+检查交易时间是否在夜间（22:00 至 06:00）。
+如果是夜间交易，则标记为欺诈交易，并记录日志。
 
-High-Value Transactions:
-Check if the transaction amount exceeds 10,000 yuan.
-If it exceeds, mark it as a fraudulent transaction and log it.
-
+大额交易：
+检查交易金额是否超过 10000 元。
+如果超过，则标记为欺诈交易，并记录日志。
 
 ```
 
-From the test screenshots, the following unit tests are provided and have passed:
+从测试截图上，可以看到提供了如下几项单元测试，并测试通过：
 
-- Transactions below the threshold
-- Normal transactions
-- Transactions with multiple rule overlaps
-- Transactions equal to the threshold
-- Transactions with abnormal transaction locations
-- Transactions with unchanged transaction addresses
-- Transactions above the threshold
-- Nighttime transactions
+- 低于阈值的交易
+- 正常交易
+- 多种规则叠加检测的交易
+- 等于阈值的交易
+- 交易地质异常的交易
+- 交易地址不变的交易
+- 高于阈值的交易
+- 夜间的交易
 
-
-### Building
+### 编译项目
 
 ```declarative
 make build
 ```
 
-### Package it to docker image
+### 打包成docker image
 
 ```declarative
 make docker-build
 ```
 
-### Run whole system
+### 本地基于docker，运行整个系统进行体验
 
 ```declarative
 make run
 
-# stop it
+# 停止整个项目
 
 make stop
 ```
 
-### Deploy it in K8S env
+### 在k8s环境中进行部署等操作
 
 ```declarative
 make k8s-deploy
@@ -113,10 +109,10 @@ make k8s-list
 make k8s-delete
 ```
 
-#### How to auto-scalling in K8S
+#### 如何在K8S环境中实现自动伸缩
 
 ```declarative
-# Setup HPA in helm
+# 主要核心代码在helm chart中配置了hpa
 
 autoscaling:
 enabled: true
@@ -124,17 +120,18 @@ minReplicas: 3
 maxReplicas: 10
 targetCPUUtilizationPercentage: 80
 
+这里设定的阈值CPU占用率达到80%，则开始触发自动伸缩
 
-# you can run this tool for testing this function:
+如果想测试伸缩性，可以使用下面工具进行测试：
 
 hey -z 1m -c 10 -q 10 http://<kube-IP>:8080
 ```
 
-Please refer to Makefile to know more details
+更多的命令和操作，请参阅Makefile文件
 
-### Commands for testing and demo
+### 测试代码和期望输出
 
-#### Create high value transaction records
+#### 创建高金额交易记录
 
 ```shell
 curl -X POST http://localhost:8080/v1/transactions \
@@ -155,7 +152,7 @@ curl -X POST http://localhost:8080/v1/transactions \
 
 ```
 
-#### Transaction location anomaly
+#### 交易地点异常
 
 ```declarative
 curl -X POST http://localhost:8080/v1/transactions \                                          
@@ -171,39 +168,37 @@ curl -X POST http://localhost:8080/v1/transactions \
 
 ```
 
-Other CRUD (Create, Read, Update, Delete) Restful APIs are also available. For specifics, you can refer to the code for testing.
+其他的增删改查Restful API也都存在，具体可以查阅代码进行测试
 
+## 如果在生产环境中使用需要注意什么
 
-## Recommendations for production
+- 添加完整的消息队列和流处理框架，作为前置，然后调用本例子中的检测交易的API进行欺诈判断
+- 使用消息队列， 要准备生产者和消费者的agent
+- 消息队列的消费者直接发送消息到流处理端， 如Flink
+- 数据库表结构中的ID，这里简化成数据库自增ID，生产环境中考虑使用分布式ID生成
+- 数据库可能要考虑分表分库
+- 甚至在业务层和数据库之间增加缓存层
+- 交易表中简化成只考虑account的情况，实际中存在user和account关系，通常一个user下面有多个accounts的实际情况。
 
-- Add a complete message queue and stream processing framework as a frontend, then call the API for detecting transactions in this example to make fraud judgments.
-- To use a message queue, you need to prepare producer and consumer agents.
-- The consumer of the message queue directly sends messages to the stream processing end, such as Flink.
-- The ID in the database table structure is simplified to an auto-incremented database ID; in a production environment, consider using a distributed ID generation system.
-- The database may need to consider sharding tables and databases.
-- Even consider adding a caching layer between the business layer and the database.
-- The transaction table is simplified to only consider the account; in reality, there is a relationship between user and account, with a common scenario where a user has multiple accounts.
+## 调研阶段的故事
 
+在开发之前，大概调研了一些云厂商的一些云产品。
 
-## Research Stories
-
-Before development, I conducted preliminary research on cloud products from various cloud service providers.
-
-The objectives were as follows:
+以下是目标：
 - AWS EKS, GCP GKE, Alibaba ACK
-- AWS SQS, GCP Pub/Sub, Alibaba Message Service
-- AWS CloudWatch, GCP Stackdriver, Alibaba Cloud Log Service
+- AWS SQS, GCP Pub/Sub,Alibaba Message Service
+- AWS CloudWatch,GCP Stackdriver, Alibaba Cloud Log Servic
 
-The initial focus was on evaluating AWS EKS, GCP GKE, and Alibaba ACK, as these are the foundational deployment platforms. Only after selecting one of these could we consider additional complementary products.
-- Alibaba ACK: After practical testing, the trial version has been discontinued, and currently, only the Pro version is available for use.
-- GCP GKE: The overall suite of products offered by the Google Cloud platform is comparatively less comprehensive when compared to other providers.
-- AWS EKS: The final choice.
+最先考察AWS EKS, GCP GKE, Alibaba ACK， 这三个产品。这是部署的基座，只有选型好了三者之一，才可能考虑其他的附属产品。
+- Alibaba ACK， 经实践，已经取消测试版本， 目前只提供Pro版本供使用
+- GCP GKE， 纵观整个Google cloud平台提供的产品和其他友商比较起来都比较缺少
+- AWS EKS， 最终的选择
 
-Below are the operational commands used during the demo run,
+下面是作demo的时候，运行的操作命令，
 
-### Create AWS EKS via CLI
+### 通过CLI来创建AWS EKS
 
-First, install eksctl， aws cli， helm etc, and we use us-east-1 region
+首先需要安装好eksctl， aws cli， helm等工具, 我们采用的us-east-1 region
 ```declarative
 eksctl create cluster -f cluster-config.yaml
 export CLUSTER_REGION=us-east-1
@@ -220,7 +215,7 @@ helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
 --set vpcId=${CLUSTER_VPC} \
 --set serviceAccount.name=aws-load-balancer-controller
 
-## Take a note, you need to use VPN , or just like me, use oversee VM for it
+## 注意这一步，需要科学上网， 而我为了方便，直接利用了海外的VM来操作上面的一步。
 
 kubectl create namespace johnny-dev --save-config
 kubectl apply -n johnny-dev -f app.yaml
@@ -228,9 +223,9 @@ kubectl get ingress -n johnny-dev
 
 ```
 
-### AWS SQS
+### 使用AWS SQS
 
-SQS creation is simple, we just show the Java integration code
+SQS的创建比较简单，略。直接给出通过Java代码来实现发送和接受消息的关键代码
 
 ```pom.xml
         <dependencies>
@@ -245,7 +240,7 @@ SQS creation is simple, we just show the Java integration code
 
 ```
 
-Java code
+SQS中发送， 接收，和删除消息。下面是完整的Java代码示例
 
 ```java
 package com.johnnydemo.aws;
@@ -347,6 +342,6 @@ public class SQSWrapper {
 
 
 ```
-### The Fee if we use AWS
+### AWS的费用
 
-Under the aforementioned configuration, using AWS EKS and SQS would incur approximate costs of $5.5 to $7+ per day, with the exact expenses being influenced by various factors such as the amount of traffic utilized.
+在使用上述的配置情况下，使用AWS EKS和SQS， 会大约产生每天 5.5 - 7+ 美元的费用， 具体费用受到使用的流量等多种因素影响。
